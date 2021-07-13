@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.RouteResult.{Complete, Rejected}
 import akka.http.scaladsl.server.{Route, RouteResult}
 import co.elastic.apm.api.{ElasticApm, Scope, Transaction}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 class UserRoutes(userRegistry: UserRegistryClient)(implicit val system: ActorSystem[_]) {
@@ -20,10 +20,10 @@ class UserRoutes(userRegistry: UserRegistryClient)(implicit val system: ActorSys
       case Complete(httpResponse: HttpResponse) =>
         val statusCode = httpResponse.status.intValue
         val statusRange = (statusCode / 100).toString + "xx"
-        transaction.addLabel("status_code", statusCode.toString)
+        transaction.setLabel("status_code", statusCode.toString)
         transaction.setResult(s"HTTP $statusRange")
       case Rejected(_) =>
-        transaction.addLabel("status_code", "500")
+        transaction.setLabel("status_code", "500")
         transaction.setResult("HTTP 5xx")
     }
     println("transaction-id: " +  ElasticApm.currentTransaction().getId + " Ending transaction " + transaction.getId  + " thread=" + Thread.currentThread().getId)
@@ -35,25 +35,25 @@ class UserRoutes(userRegistry: UserRegistryClient)(implicit val system: ActorSys
 
   def withTraceContext(route: Route): Route = { ctx =>
     val transaction = ElasticApm.startTransaction()
-    var scope: Scope = null;
+    var scope: Scope = null
     try {
       scope = transaction.activate()
     } catch {
       case NonFatal(_) =>
         if (scope != null) {
-          scope.close();
+          scope.close()
         }
     }
     println("transaction-id: " +  ElasticApm.currentTransaction().getId + "Starting transaction " + transaction.getId + " thread=" + Thread.currentThread().getId)
     transaction.setType(Transaction.TYPE_REQUEST)
     transaction.setName(ctx.request.method.value + " " + ctx.request.uri.path.toString)
-    transaction.addLabel("path", ctx.request.uri.path.toString)
-    transaction.addLabel("request_method", ctx.request.method.value)
+    transaction.setLabel("path", ctx.request.uri.path.toString)
+    transaction.setLabel("request_method", ctx.request.method.value)
 
     mapRouteResult(mapRouteResultWithTransaction(transaction, scope))(route)(ctx)
   }
 
-  implicit val executionContext = system.executionContext
+  implicit val executionContext: ExecutionContext = system.executionContext
 
   def waitForIt(): Future[Unit] = {
     println("transaction-id: " +  ElasticApm.currentTransaction().getId + " waitForIt before " + " thread=" + Thread.currentThread().getId)
