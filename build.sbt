@@ -2,7 +2,7 @@ import sbtassembly.AssemblyKeys.assembly
 
 lazy val akkaHttpVersion   = "10.1.12"
 lazy val akkaVersion       = "2.6.6"
-lazy val elasticApmVersion = "1.17.0"
+lazy val elasticApmVersion = "1.24.1-SNAPSHOT"
 
 resolvers += Resolver.mavenLocal
 
@@ -10,7 +10,7 @@ lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
       organization    := "com.example",
-      scalaVersion    := "2.13.2"
+      scalaVersion    := "2.13.6"
     )),
     name := "akka-http-apm",
     libraryDependencies ++= Seq(
